@@ -1,0 +1,15 @@
+services:
+  db:
+    image: postgres:17
+    container_name: lineup-db
+    environment:
+      POSTGRES_DB: lineup
+      POSTGRES_USER: lineup
+      POSTGRES_PASSWORD: lineup
+    ports:
+      - "5432:5432"
+    volumes:
+      - lineup-pgdata:/var/lib/postgresql/data
+
+volumes:
+  lineup-pgdata:
