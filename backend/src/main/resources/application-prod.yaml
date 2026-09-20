@@ -3,3 +3,10 @@ spring:
     url: ${DB_URL}
     username: ${DB_USER}
     password: ${DB_PASSWORD}
+
+# Swagger é ferramenta de desenvolvimento e fica fora do ar em produção.
+spring doc:
+  api-docs:
+    enabled: false
+  swagger-ui:
+    enabled: false

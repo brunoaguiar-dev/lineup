@@ -58,6 +58,12 @@
 			<groupId>org.flywaydb</groupId>
 			<artifactId>flyway-database-postgresql</artifactId>
 		</dependency>
+		<!-- O Boot nao gerencia a versao do springdoc, entao ela fica fixa aqui. -->
+		<dependency>
+			<groupId>org.springdoc</groupId>
+			<artifactId>springdoc-openapi-starter-webmvc-ui</artifactId>
+			<version>3.1.1</version>
+		</dependency>
 
 		<dependency>
 			<groupId>org.postgresql</groupId>
