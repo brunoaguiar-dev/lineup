@@ -2,17 +2,13 @@ spring:
   application:
     name: lineup-api
 
-  datasource:
-    url: jdbc:postgresql://localhost:5432/lineup
-    username: lineup
-    password: lineup
+  profiles:
+    default: dev
 
   jpa:
     hibernate:
       ddl-auto: validate
     open-in-view: false
-    properties:
-      hibernate.format_sql: true
 
   flyway:
     enabled: true
