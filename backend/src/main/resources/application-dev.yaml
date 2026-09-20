@@ -1,3 +1,5 @@
+# Credenciais do Postgres local que o docker-compose cria. Não são segredo:
+# Banco vazio, só escuta em localhost. Produção lê de variável de ambiente.
 spring:
   datasource:
     url: jdbc:postgresql://localhost:5432/lineup
