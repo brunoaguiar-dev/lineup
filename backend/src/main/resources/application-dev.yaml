@@ -1,0 +1,9 @@
+spring:
+  datasource:
+    url: jdbc:postgresql://localhost:5432/lineup
+    username: lineup
+    password: lineup
+
+  jpa:
+    properties:
+      hibernate.format_sql: true
