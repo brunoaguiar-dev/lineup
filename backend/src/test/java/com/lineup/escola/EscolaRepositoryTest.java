@@ -5,8 +5,6 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.data.jpa.test.autoconfigure.DataJpaTest;
 import org.springframework.boot.jdbc.test.autoconfigure.AutoConfigureTestDatabase;
 import org.springframework.boot.testcontainers.service.connection.ServiceConnection;
-import org.springframework.transaction.annotation.Propagation;
-import org.springframework.transaction.annotation.Transactional;
 import org.testcontainers.junit.jupiter.Container;
 import org.testcontainers.junit.jupiter.Testcontainers;
 import org.testcontainers.postgresql.PostgreSQLContainer;
@@ -16,8 +14,8 @@ import java.time.Instant;
 import static org.assertj.core.api.Assertions.assertThat;
 
 /**
- * Roda contra Postgres de verdade porque o que está a ser testado só existe lá:
- * o ‘trigger’ da V3 e os ‘defaults’ das colunas de auditoria.
+ * Roda contra Postgres de verdade: o que se testa aqui é o mapeamento da
+ * entidade contra o schema, que banco em memória não reproduz.
  */
 @DataJpaTest
 @AutoConfigureTestDatabase(replace = AutoConfigureTestDatabase.Replace.NONE)
@@ -32,8 +30,8 @@ class EscolaRepositoryTest {
     private EscolaRepository repository;
 
     @Test
-    void gravaEDeixaOBancoPreencherAsColunasDeAuditoria() {
-        Escola salva = repository.saveAndFlush(novaEscola());
+    void gravaEPreencheAsColunasDeAuditoria() {
+        Escola salva = repository.save(novaEscola());
 
         assertThat(salva.getId()).isNotNull();
         assertThat(salva.getCriadoEm()).isNotNull();
@@ -41,23 +39,17 @@ class EscolaRepositoryTest {
         assertThat(salva.getUf()).isEqualTo("CE");
     }
 
-    /**
-     * Sem NOT_SUPPORTED o insert e o ‘update’ rodariam na transação do teste, e o
-     * now() do Postgres devolveria o mesmo horário para os dois. Suspendendo a
-     * transação, cada chamada ao repository abre a sua, e os instantes diferem.
-     */
     @Test
-    @Transactional(propagation = Propagation.NOT_SUPPORTED)
-    void triggerMoveOAtualizadoEmSemTocarNoCriadoEm() {
-        Escola salva = repository.saveAndFlush(novaEscola());
+    void atualizacaoMoveOAtualizadoEmSemTocarNoCriadoEm() {
+        Escola salva = repository.save(novaEscola());
         Instant criadoEm = salva.getCriadoEm();
         Instant atualizadoEmInicial = salva.getAtualizadoEm();
 
         salva.setNome("Surf Leste Oeste Fortaleza");
-        Escola atualizada = repository.saveAndFlush(salva);
+        repository.flush();
 
-        assertThat(atualizada.getAtualizadoEm()).isAfter(atualizadoEmInicial);
-        assertThat(atualizada.getCriadoEm()).isEqualTo(criadoEm);
+        assertThat(salva.getAtualizadoEm()).isAfter(atualizadoEmInicial);
+        assertThat(salva.getCriadoEm()).isEqualTo(criadoEm);
     }
 
     private Escola novaEscola() {

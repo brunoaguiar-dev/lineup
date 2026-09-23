@@ -19,7 +19,7 @@ class EscolaService {
     EscolaResponse criar(EscolaRequest request) {
         Escola escola = new Escola();
         aplicar(request, escola);
-        return EscolaResponse.from(repository.saveAndFlush(escola));
+        return EscolaResponse.from(repository.save(escola));
     }
 
     EscolaResponse buscarPorId(UUID id) {
@@ -30,8 +30,8 @@ class EscolaService {
     EscolaResponse atualizar(UUID id, EscolaRequest request) {
         Escola escola = buscarEntidade(id);
         aplicar(request, escola);
-        // A entidade já está gerenciada, então o flush basta para o banco gravar
-        // e devolver o atualizado_em antes de montarmos a resposta.
+        // O @LastModifiedDate é preenchido no @PreUpdate, que o JPA dispara no
+        // flush. Sem forçar aqui, a resposta sairia com o valor anterior.
         repository.flush();
         return EscolaResponse.from(escola);
     }
