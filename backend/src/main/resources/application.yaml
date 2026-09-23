@@ -16,3 +16,9 @@ spring:
 
 server:
   port: 8080
+
+lineup:
+  jwt:
+    # Chave de assinatura em base64. Gere com: openssl rand -base64 48
+    segredo: ${LINEUP_JWT_SEGREDO}
+    validade-do-access-token: 15m

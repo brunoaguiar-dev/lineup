@@ -1,0 +1,4 @@
+# Chave de teste. O banco é um container que morre no fim da execução.
+lineup:
+  jwt:
+    segredo: bD4VCOoUbFX2wodZnn6qkNBcYWd0RvuQhbDL+SE7Lpa44W96xJFOY8c/4UOBcRpj

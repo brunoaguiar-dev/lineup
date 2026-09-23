@@ -10,12 +10,10 @@ import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity;
 import org.springframework.security.config.annotation.web.configurers.AbstractHttpConfigurer;
 import org.springframework.security.config.http.SessionCreationPolicy;
+import org.springframework.security.crypto.factory.PasswordEncoderFactories;
+import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.security.web.SecurityFilterChain;
 
-/**
- * Configuração provisória. O HTTP Basic serve só para testar a API enquanto o
- * login de verdade (JWT e link de ativação) não existe.
- */
 @Configuration
 @EnableWebSecurity
 public class SecurityConfig {
@@ -24,10 +22,7 @@ public class SecurityConfig {
             "/swagger-ui/**", "/swagger-ui.html", "/v3/api-docs/**"
     };
 
-    /**
-     * Só existe no profile dev. Fora dele as rotas do Swagger caem na regra geral
-     * e passam a exigir autenticação.
-     */
+    // Fora do profile dev este chain não existe, e o Swagger cai na regra geral.
     @Bean
     @Order(1)
     @Profile("dev")
@@ -47,8 +42,16 @@ public class SecurityConfig {
                         session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
                 .authorizeHttpRequests(auth -> auth
                         .requestMatchers(HttpMethod.GET, "/actuator/health").permitAll()
+                        .requestMatchers(HttpMethod.POST, ApiPaths.AUTH + "/login").permitAll()
                         .anyRequest().authenticated())
-                .httpBasic(Customizer.withDefaults())
+                .oauth2ResourceServer(oauth2 -> oauth2.jwt(Customizer.withDefaults()))
                 .build();
+    }
+
+    // O hash é gravado com o algoritmo na frente ({bcrypt}$2a$...). É isso que
+    // permite adotar outro algoritmo depois sem quebrar as senhas já gravadas.
+    @Bean
+    public PasswordEncoder passwordEncoder() {
+        return PasswordEncoderFactories.createDelegatingPasswordEncoder();
     }
 }

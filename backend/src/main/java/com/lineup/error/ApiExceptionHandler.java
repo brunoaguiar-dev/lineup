@@ -1,6 +1,7 @@
 package com.lineup.error;
 
 import com.lineup.escola.EscolaNaoEncontrada;
+import com.lineup.usuario.CredenciaisInvalidas;
 import org.jspecify.annotations.NonNull;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpStatus;
@@ -27,6 +28,11 @@ class ApiExceptionHandler extends ResponseEntityExceptionHandler {
     @ExceptionHandler(EscolaNaoEncontrada.class)
     ProblemDetail escolaNaoEncontrada(EscolaNaoEncontrada e) {
         return ProblemDetail.forStatusAndDetail(HttpStatus.NOT_FOUND, e.getMessage());
+    }
+
+    @ExceptionHandler(CredenciaisInvalidas.class)
+    ProblemDetail credenciaisInvalidas(CredenciaisInvalidas e) {
+        return ProblemDetail.forStatusAndDetail(HttpStatus.UNAUTHORIZED, e.getMessage());
     }
 
     @Override
