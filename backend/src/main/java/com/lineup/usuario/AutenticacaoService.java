@@ -22,6 +22,7 @@ class AutenticacaoService {
     private final PasswordEncoder passwordEncoder;
     private final JwtEncoder jwtEncoder;
     private final JwtProperties propriedades;
+    private final LimitadorDeTentativas limitador;
 
     // Conferido quando o email não existe, para o tempo de resposta ser o mesmo
     // nos dois casos e não revelar quais emails estão cadastrados.
@@ -30,26 +31,32 @@ class AutenticacaoService {
     AutenticacaoService(UsuarioRepository repository,
                         PasswordEncoder passwordEncoder,
                         JwtEncoder jwtEncoder,
-                        JwtProperties propriedades) {
+                        JwtProperties propriedades,
+                        LimitadorDeTentativas limitador) {
         this.repository = repository;
         this.passwordEncoder = passwordEncoder;
         this.jwtEncoder = jwtEncoder;
         this.propriedades = propriedades;
+        this.limitador = limitador;
         this.hashDeComparacao = passwordEncoder.encode(UUID.randomUUID().toString());
     }
 
-    LoginResponse logar(LoginRequest request) {
+    LoginResponse logar(LoginRequest request, String ip) {
+        limitador.verificar(ip, request.email());
+
         Optional<Usuario> encontrado = repository.findByEmailIgnoreCase(request.email())
                 .filter(usuario -> usuario.getSenhaHash() != null);
 
         String hash = encontrado.map(Usuario::getSenhaHash).orElse(hashDeComparacao);
         boolean senhaConfere = passwordEncoder.matches(request.senha(), hash);
 
-        Usuario usuario = encontrado
-                .filter(qualquer -> senhaConfere)
-                .orElseThrow(CredenciaisInvalidas::new);
+        if (!senhaConfere || encontrado.isEmpty()) {
+            limitador.registrarFalha(ip, request.email());
+            throw new CredenciaisInvalidas();
+        }
 
-        return emitirToken(usuario);
+        limitador.registrarAcerto(ip, request.email());
+        return emitirToken(encontrado.get());
     }
 
     private LoginResponse emitirToken(Usuario usuario) {

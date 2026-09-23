@@ -37,7 +37,7 @@ class AutenticacaoControllerTest {
     @Test
     void loginValidoDevolveOToken() throws Exception {
         Instant expiraEm = Instant.parse("2026-09-20T19:30:00Z");
-        given(service.logar(any())).willReturn(new LoginResponse("um.token.qualquer", expiraEm));
+        given(service.logar(any(), any())).willReturn(new LoginResponse("um.token.qualquer", expiraEm));
 
         mvc.perform(post(ApiPaths.AUTH + "/login")
                         .contentType(MediaType.APPLICATION_JSON)
@@ -50,7 +50,7 @@ class AutenticacaoControllerTest {
 
     @Test
     void senhaErradaDevolve401SemDizerOQueEstaErrado() throws Exception {
-        willThrow(new CredenciaisInvalidas()).given(service).logar(any());
+        willThrow(new CredenciaisInvalidas()).given(service).logar(any(), any());
 
         mvc.perform(post(ApiPaths.AUTH + "/login")
                         .contentType(MediaType.APPLICATION_JSON)
@@ -60,6 +60,20 @@ class AutenticacaoControllerTest {
                 .andExpect(status().isUnauthorized())
                 .andExpect(content().contentTypeCompatibleWith(MediaType.APPLICATION_PROBLEM_JSON))
                 .andExpect(jsonPath("$.detail").value("Email ou senha inválidos"));
+    }
+
+    @Test
+    void limiteEstouradoDevolve429() throws Exception {
+        willThrow(new MuitasTentativas(LimitadorDeTentativas.JANELA)).given(service).logar(any(), any());
+
+        mvc.perform(post(ApiPaths.AUTH + "/login")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {"email":"bruno@lineup.com","senha":"errada"}
+                                """))
+                .andExpect(status().isTooManyRequests())
+                .andExpect(content().contentTypeCompatibleWith(MediaType.APPLICATION_PROBLEM_JSON))
+                .andExpect(jsonPath("$.detail").value("Muitas tentativas de login. Tente novamente em 5 minutos."));
     }
 
     @Test

@@ -70,6 +70,12 @@
 			<version>3.1.1</version>
 		</dependency>
 
+		<!-- Expira sozinho as janelas do limitador de tentativas. -->
+		<dependency>
+			<groupId>com.github.ben-manes.caffeine</groupId>
+			<artifactId>caffeine</artifactId>
+		</dependency>
+
 		<dependency>
 			<groupId>org.postgresql</groupId>
 			<artifactId>postgresql</artifactId>
