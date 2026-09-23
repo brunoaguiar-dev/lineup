@@ -37,7 +37,7 @@ class AutenticacaoControllerTest {
     @Test
     void loginValidoDevolveOToken() throws Exception {
         Instant expiraEm = Instant.parse("2026-09-20T19:30:00Z");
-        given(service.logar(any(), any())).willReturn(new LoginResponse("um.token.qualquer", expiraEm));
+        given(service.logar(any(), any())).willReturn(new TokenResponse("um.token.qualquer", expiraEm, "um.refresh.qualquer"));
 
         mvc.perform(post(ApiPaths.AUTH + "/login")
                         .contentType(MediaType.APPLICATION_JSON)
@@ -74,6 +74,29 @@ class AutenticacaoControllerTest {
                 .andExpect(status().isTooManyRequests())
                 .andExpect(content().contentTypeCompatibleWith(MediaType.APPLICATION_PROBLEM_JSON))
                 .andExpect(jsonPath("$.detail").value("Muitas tentativas de login. Tente novamente em 5 minutos."));
+    }
+
+    @Test
+    void refreshInvalidoDevolve401() throws Exception {
+        willThrow(new RefreshTokenInvalido()).given(service).renovar(any());
+
+        mvc.perform(post(ApiPaths.AUTH + "/refresh")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {"refreshToken":"qualquer-coisa"}
+                                """))
+                .andExpect(status().isUnauthorized())
+                .andExpect(jsonPath("$.detail").value("Sessão expirada. Faça login novamente."));
+    }
+
+    @Test
+    void logoutDevolve204() throws Exception {
+        mvc.perform(post(ApiPaths.AUTH + "/logout")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {"refreshToken":"qualquer-coisa"}
+                                """))
+                .andExpect(status().isNoContent());
     }
 
     @Test

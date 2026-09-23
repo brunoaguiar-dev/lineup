@@ -18,7 +18,8 @@ server:
   port: 8080
 
 lineup:
-  jwt:
+  token:
     # Chave de assinatura em base64. Gere com: openssl rand -base64 48
-    segredo: ${LINEUP_JWT_SEGREDO}
+    segredo: ${LINEUP_TOKEN_SEGREDO}
     validade-do-access-token: 15m
+    validade-do-refresh-token: 7d

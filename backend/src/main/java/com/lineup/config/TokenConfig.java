@@ -14,11 +14,11 @@ import javax.crypto.spec.SecretKeySpec;
 import java.util.Base64;
 
 @Configuration
-@EnableConfigurationProperties(JwtProperties.class)
+@EnableConfigurationProperties(TokenProperties.class)
 public class TokenConfig {
 
     @Bean
-    SecretKey chaveDeAssinatura(JwtProperties propriedades) {
+    SecretKey chaveDeAssinatura(TokenProperties propriedades) {
         byte[] bytes = Base64.getDecoder().decode(propriedades.segredo());
         return new SecretKeySpec(bytes, "HmacSHA256");
     }

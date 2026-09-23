@@ -3,6 +3,7 @@ package com.lineup.error;
 import com.lineup.escola.EscolaNaoEncontrada;
 import com.lineup.usuario.CredenciaisInvalidas;
 import com.lineup.usuario.MuitasTentativas;
+import com.lineup.usuario.RefreshTokenInvalido;
 import org.jspecify.annotations.NonNull;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpStatus;
@@ -33,6 +34,11 @@ class ApiExceptionHandler extends ResponseEntityExceptionHandler {
 
     @ExceptionHandler(CredenciaisInvalidas.class)
     ProblemDetail credenciaisInvalidas(CredenciaisInvalidas e) {
+        return ProblemDetail.forStatusAndDetail(HttpStatus.UNAUTHORIZED, e.getMessage());
+    }
+
+    @ExceptionHandler(RefreshTokenInvalido.class)
+    ProblemDetail refreshTokenInvalido(RefreshTokenInvalido e) {
         return ProblemDetail.forStatusAndDetail(HttpStatus.UNAUTHORIZED, e.getMessage());
     }
 

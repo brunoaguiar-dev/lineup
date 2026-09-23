@@ -1,6 +1,6 @@
 package com.lineup.usuario;
 
-import com.lineup.config.JwtProperties;
+import com.lineup.config.TokenProperties;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.security.oauth2.jose.jws.MacAlgorithm;
 import org.springframework.security.oauth2.jwt.JwsHeader;
@@ -21,8 +21,9 @@ class AutenticacaoService {
     private final UsuarioRepository repository;
     private final PasswordEncoder passwordEncoder;
     private final JwtEncoder jwtEncoder;
-    private final JwtProperties propriedades;
+    private final TokenProperties propriedades;
     private final LimitadorDeTentativas limitador;
+    private final RefreshTokenService refreshTokens;
 
     // Conferido quando o email não existe, para o tempo de resposta ser o mesmo
     // nos dois casos e não revelar quais emails estão cadastrados.
@@ -31,17 +32,20 @@ class AutenticacaoService {
     AutenticacaoService(UsuarioRepository repository,
                         PasswordEncoder passwordEncoder,
                         JwtEncoder jwtEncoder,
-                        JwtProperties propriedades,
-                        LimitadorDeTentativas limitador) {
+                        TokenProperties propriedades,
+                        LimitadorDeTentativas limitador,
+                        RefreshTokenService refreshTokens) {
         this.repository = repository;
         this.passwordEncoder = passwordEncoder;
         this.jwtEncoder = jwtEncoder;
         this.propriedades = propriedades;
         this.limitador = limitador;
+        this.refreshTokens = refreshTokens;
         this.hashDeComparacao = passwordEncoder.encode(UUID.randomUUID().toString());
     }
 
-    LoginResponse logar(LoginRequest request, String ip) {
+    @Transactional
+    TokenResponse logar(LoginRequest request, String ip) {
         limitador.verificar(ip, request.email());
 
         Optional<Usuario> encontrado = repository.findByEmailIgnoreCase(request.email())
@@ -56,26 +60,43 @@ class AutenticacaoService {
         }
 
         limitador.registrarAcerto(ip, request.email());
-        return emitirToken(encontrado.get());
+
+        Usuario usuario = encontrado.get();
+        return responder(usuario, refreshTokens.emitir(usuario, UUID.randomUUID()));
     }
 
-    private LoginResponse emitirToken(Usuario usuario) {
+    @Transactional(noRollbackFor = RefreshTokenInvalido.class)
+    TokenResponse renovar(String refreshToken) {
+        RefreshToken consumido = refreshTokens.consumir(refreshToken);
+        Usuario usuario = consumido.getUsuario();
+
+        return responder(usuario, refreshTokens.emitir(usuario, consumido.getFamilia()));
+    }
+
+    @Transactional
+    void sair(String refreshToken) {
+        refreshTokens.revogarSessao(refreshToken);
+    }
+
+    private TokenResponse responder(Usuario usuario, String refreshToken) {
         Instant agora = Instant.now();
         Instant expiraEm = agora.plus(propriedades.validadeDoAccessToken());
 
-        JwtClaimsSet claims = JwtClaimsSet.builder()
+        JwtClaimsSet.Builder claims = JwtClaimsSet.builder()
                 .issuer("lineup")
                 .issuedAt(agora)
                 .expiresAt(expiraEm)
                 .subject(usuario.getId().toString())
-                .claim("papel", usuario.getPapel().name())
-                // Nulo para SUPER_ADMIN.
-                .claim("escolaId", usuario.getEscolaId())
-                .build();
+                .claim("papel", usuario.getPapel().name());
+
+        // Nulo para SUPER_ADMIN, e o JwtClaimsSet recusa claim nula.
+        if (usuario.getEscolaId() != null) {
+            claims.claim("escolaId", usuario.getEscolaId().toString());
+        }
 
         JwsHeader cabecalho = JwsHeader.with(MacAlgorithm.HS256).build();
-        String token = jwtEncoder.encode(JwtEncoderParameters.from(cabecalho, claims)).getTokenValue();
+        String token = jwtEncoder.encode(JwtEncoderParameters.from(cabecalho, claims.build())).getTokenValue();
 
-        return new LoginResponse(token, expiraEm);
+        return new TokenResponse(token, expiraEm, refreshToken);
     }
 }
