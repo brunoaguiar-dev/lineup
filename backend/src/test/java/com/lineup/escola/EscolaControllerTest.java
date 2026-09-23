@@ -1,15 +1,18 @@
 package com.lineup.escola;
 
+import com.lineup.autenticacao.Acesso;
 import com.lineup.config.SecurityConfig;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.webmvc.test.autoconfigure.WebMvcTest;
 import org.springframework.context.annotation.Import;
 import org.springframework.http.MediaType;
+import org.springframework.security.core.authority.SimpleGrantedAuthority;
 import org.springframework.security.oauth2.jwt.JwtDecoder;
 import org.springframework.security.test.context.support.WithAnonymousUser;
 import org.springframework.security.test.context.support.WithMockUser;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
+import org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors;
 import org.springframework.test.web.servlet.MockMvc;
 
 import java.time.Instant;
@@ -18,6 +21,7 @@ import java.util.UUID;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.BDDMockito.given;
 import static org.mockito.BDDMockito.willThrow;
+import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.jwt;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.content;
@@ -26,8 +30,8 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 @WebMvcTest(EscolaController.class)
-@Import(SecurityConfig.class)
-@WithMockUser
+@Import({SecurityConfig.class, Acesso.class})
+@WithMockUser(roles = "SUPER_ADMIN")
 class EscolaControllerTest {
 
     private static final UUID ID = UUID.fromString("99b554d6-8af2-4356-a550-a4e7481b9c26");
@@ -84,6 +88,38 @@ class EscolaControllerTest {
     void semCredencialDevolve401() throws Exception {
         mvc.perform(get(EscolaController.BASE_PATH + "/" + ID))
                 .andExpect(status().isUnauthorized());
+    }
+
+    @Test
+    void adminDeEscolaNaoCriaEscola() throws Exception {
+        mvc.perform(post(EscolaController.BASE_PATH)
+                        .with(comoAdminDa(ID))
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {"nome":"Surf Leste Oeste","uf":"CE"}
+                                """))
+                .andExpect(status().isForbidden());
+    }
+
+    @Test
+    void adminDeEscolaVeAPropriaEscola() throws Exception {
+        given(service.buscarPorId(ID)).willReturn(umaResposta());
+
+        mvc.perform(get(EscolaController.BASE_PATH + "/" + ID).with(comoAdminDa(ID)))
+                .andExpect(status().isOk());
+    }
+
+    @Test
+    void adminDeEscolaNaoVeEscolaDeOutro() throws Exception {
+        mvc.perform(get(EscolaController.BASE_PATH + "/" + ID)
+                        .with(comoAdminDa(UUID.randomUUID())))
+                .andExpect(status().isForbidden());
+    }
+
+    private static SecurityMockMvcRequestPostProcessors.JwtRequestPostProcessor comoAdminDa(UUID escolaId) {
+        return jwt()
+                .jwt(token -> token.claim("papel", "ADMIN_ESCOLA").claim("escolaId", escolaId.toString()))
+                .authorities(new SimpleGrantedAuthority("ROLE_ADMIN_ESCOLA"));
     }
 
     private String locationEsperado() {

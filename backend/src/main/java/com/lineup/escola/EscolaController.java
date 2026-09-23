@@ -4,6 +4,7 @@ import com.lineup.config.ApiPaths;
 import io.swagger.v3.oas.annotations.responses.ApiResponse;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
@@ -31,6 +32,7 @@ class EscolaController {
     }
 
     @PostMapping
+    @PreAuthorize("hasRole('SUPER_ADMIN')")
     @ApiResponse(responseCode = "201", description = "Escola criada")
     ResponseEntity<EscolaResponse> criar(@Valid @RequestBody EscolaRequest request,
                                          UriComponentsBuilder uriBuilder) {
@@ -40,11 +42,13 @@ class EscolaController {
     }
 
     @GetMapping("/{id}")
+    @PreAuthorize("@acesso.naEscola(#id, authentication)")
     EscolaResponse buscarPorId(@PathVariable UUID id) {
         return service.buscarPorId(id);
     }
 
     @PutMapping("/{id}")
+    @PreAuthorize("@acesso.naEscola(#id, authentication)")
     EscolaResponse atualizar(@PathVariable UUID id, @Valid @RequestBody EscolaRequest request) {
         return service.atualizar(id, request);
     }
