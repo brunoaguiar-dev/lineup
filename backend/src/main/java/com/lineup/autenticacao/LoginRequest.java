@@ -1,4 +1,4 @@
-package com.lineup.usuario;
+package com.lineup.autenticacao;
 
 import jakarta.validation.constraints.Email;
 import jakarta.validation.constraints.NotBlank;

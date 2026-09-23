@@ -1,4 +1,4 @@
-package com.lineup.usuario;
+package com.lineup.autenticacao;
 
 import com.lineup.config.TokenProperties;
 import org.springframework.stereotype.Service;
@@ -30,11 +30,11 @@ class RefreshTokenService {
         this.propriedades = propriedades;
     }
 
-    String emitir(Usuario usuario, UUID familia) {
+    String emitir(UUID usuarioId, UUID familia) {
         String valor = novoValor();
 
         RefreshToken token = new RefreshToken();
-        token.setUsuario(usuario);
+        token.setUsuarioId(usuarioId);
         token.setFamilia(familia);
         token.setTokenHash(hash(valor));
         token.setExpiraEm(Instant.now().plus(propriedades.validadeDoRefreshToken()));

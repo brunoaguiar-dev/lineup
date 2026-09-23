@@ -1,4 +1,4 @@
-package com.lineup.usuario;
+package com.lineup.autenticacao;
 
 import jakarta.persistence.LockModeType;
 import org.springframework.data.jpa.repository.JpaRepository;

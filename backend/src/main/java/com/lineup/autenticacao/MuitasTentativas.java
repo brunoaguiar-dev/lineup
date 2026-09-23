@@ -1,4 +1,4 @@
-package com.lineup.usuario;
+package com.lineup.autenticacao;
 
 import java.time.Duration;
 

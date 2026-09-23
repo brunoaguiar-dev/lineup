@@ -1,7 +1,8 @@
-package com.lineup.usuario;
+package com.lineup.autenticacao;
 
 import com.lineup.config.TokenProperties;
-import org.springframework.security.crypto.password.PasswordEncoder;
+import com.lineup.usuario.UsuarioAutenticado;
+import com.lineup.usuario.UsuarioService;
 import org.springframework.security.oauth2.jose.jws.MacAlgorithm;
 import org.springframework.security.oauth2.jwt.JwsHeader;
 import org.springframework.security.oauth2.jwt.JwtClaimsSet;
@@ -18,59 +19,50 @@ import java.util.UUID;
 @Transactional(readOnly = true)
 class AutenticacaoService {
 
-    private final UsuarioRepository repository;
-    private final PasswordEncoder passwordEncoder;
+    private final UsuarioService usuarios;
     private final JwtEncoder jwtEncoder;
     private final TokenProperties propriedades;
     private final LimitadorDeTentativas limitador;
     private final RefreshTokenService refreshTokens;
 
-    // Conferido quando o email não existe, para o tempo de resposta ser o mesmo
-    // nos dois casos e não revelar quais emails estão cadastrados.
-    private final String hashDeComparacao;
-
-    AutenticacaoService(UsuarioRepository repository,
-                        PasswordEncoder passwordEncoder,
+    AutenticacaoService(UsuarioService usuarios,
                         JwtEncoder jwtEncoder,
                         TokenProperties propriedades,
                         LimitadorDeTentativas limitador,
                         RefreshTokenService refreshTokens) {
-        this.repository = repository;
-        this.passwordEncoder = passwordEncoder;
+        this.usuarios = usuarios;
         this.jwtEncoder = jwtEncoder;
         this.propriedades = propriedades;
         this.limitador = limitador;
         this.refreshTokens = refreshTokens;
-        this.hashDeComparacao = passwordEncoder.encode(UUID.randomUUID().toString());
     }
 
     @Transactional
     TokenResponse logar(LoginRequest request, String ip) {
         limitador.verificar(ip, request.email());
 
-        Optional<Usuario> encontrado = repository.findByEmailIgnoreCase(request.email())
-                .filter(usuario -> usuario.getSenhaHash() != null);
+        Optional<UsuarioAutenticado> encontrado =
+                usuarios.autenticar(request.email(), request.senha());
 
-        String hash = encontrado.map(Usuario::getSenhaHash).orElse(hashDeComparacao);
-        boolean senhaConfere = passwordEncoder.matches(request.senha(), hash);
-
-        if (!senhaConfere || encontrado.isEmpty()) {
+        if (encontrado.isEmpty()) {
             limitador.registrarFalha(ip, request.email());
             throw new CredenciaisInvalidas();
         }
 
         limitador.registrarAcerto(ip, request.email());
 
-        Usuario usuario = encontrado.get();
-        return responder(usuario, refreshTokens.emitir(usuario, UUID.randomUUID()));
+        UsuarioAutenticado usuario = encontrado.get();
+        return responder(usuario, refreshTokens.emitir(usuario.id(), UUID.randomUUID()));
     }
 
     @Transactional(noRollbackFor = RefreshTokenInvalido.class)
     TokenResponse renovar(String refreshToken) {
         RefreshToken consumido = refreshTokens.consumir(refreshToken);
-        Usuario usuario = consumido.getUsuario();
 
-        return responder(usuario, refreshTokens.emitir(usuario, consumido.getFamilia()));
+        UsuarioAutenticado usuario = usuarios.porId(consumido.getUsuarioId())
+                .orElseThrow(RefreshTokenInvalido::new);
+
+        return responder(usuario, refreshTokens.emitir(usuario.id(), consumido.getFamilia()));
     }
 
     @Transactional
@@ -78,7 +70,7 @@ class AutenticacaoService {
         refreshTokens.revogarSessao(refreshToken);
     }
 
-    private TokenResponse responder(Usuario usuario, String refreshToken) {
+    private TokenResponse responder(UsuarioAutenticado usuario, String refreshToken) {
         Instant agora = Instant.now();
         Instant expiraEm = agora.plus(propriedades.validadeDoAccessToken());
 
@@ -86,12 +78,12 @@ class AutenticacaoService {
                 .issuer("lineup")
                 .issuedAt(agora)
                 .expiresAt(expiraEm)
-                .subject(usuario.getId().toString())
-                .claim("papel", usuario.getPapel().name());
+                .subject(usuario.id().toString())
+                .claim("papel", usuario.papel().name());
 
         // Nulo para SUPER_ADMIN, e o JwtClaimsSet recusa claim nula.
-        if (usuario.getEscolaId() != null) {
-            claims.claim("escolaId", usuario.getEscolaId().toString());
+        if (usuario.escolaId() != null) {
+            claims.claim("escolaId", usuario.escolaId().toString());
         }
 
         JwsHeader cabecalho = JwsHeader.with(MacAlgorithm.HS256).build();

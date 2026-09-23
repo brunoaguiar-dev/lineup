@@ -1,4 +1,4 @@
-package com.lineup.usuario;
+package com.lineup.autenticacao;
 
 // Mesma mensagem para token inexistente, vencido e reusado.
 public class RefreshTokenInvalido extends RuntimeException {

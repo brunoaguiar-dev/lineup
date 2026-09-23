@@ -1,9 +1,9 @@
 package com.lineup.error;
 
+import com.lineup.autenticacao.CredenciaisInvalidas;
+import com.lineup.autenticacao.MuitasTentativas;
+import com.lineup.autenticacao.RefreshTokenInvalido;
 import com.lineup.escola.EscolaNaoEncontrada;
-import com.lineup.usuario.CredenciaisInvalidas;
-import com.lineup.usuario.MuitasTentativas;
-import com.lineup.usuario.RefreshTokenInvalido;
 import org.jspecify.annotations.NonNull;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpStatus;

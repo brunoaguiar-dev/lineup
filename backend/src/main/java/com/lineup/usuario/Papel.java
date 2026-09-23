@@ -1,6 +1,6 @@
 package com.lineup.usuario;
 
-enum Papel {
+public enum Papel {
 
     /** Opera a plataforma e cria as escolas. Não pertence a nenhuma. */
     SUPER_ADMIN,

@@ -1,4 +1,4 @@
-package com.lineup.usuario;
+package com.lineup.autenticacao;
 
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -10,6 +10,7 @@ import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.boot.testcontainers.service.connection.ServiceConnection;
 import org.springframework.boot.webmvc.test.autoconfigure.AutoConfigureMockMvc;
 import org.springframework.http.MediaType;
+import org.springframework.jdbc.core.simple.JdbcClient;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.web.servlet.MockMvc;
@@ -41,22 +42,25 @@ class AutenticacaoFluxoTest {
     private MockMvc mvc;
 
     @Autowired
-    private UsuarioRepository usuarios;
+    private JdbcClient jdbc;
 
     @Autowired
     private PasswordEncoder passwordEncoder;
 
     private final ObjectMapper json = new ObjectMapper();
 
+    // Insere direto no banco porque a entidade de usuario e o repositorio dela
+    // sao fechados no modulo, e nao existe cadastro de usuario ainda.
     @BeforeEach
     void cadastraOSuperAdmin() {
-        if (usuarios.findByEmailIgnoreCase(EMAIL).isEmpty()) {
-            Usuario usuario = new Usuario();
-            usuario.setEmail(EMAIL);
-            usuario.setSenhaHash(passwordEncoder.encode(SENHA));
-            usuario.setPapel(Papel.SUPER_ADMIN);
-            usuarios.save(usuario);
-        }
+        jdbc.sql("""
+                INSERT INTO usuario (email, senha_hash, papel)
+                VALUES (:email, :hash, 'SUPER_ADMIN')
+                ON CONFLICT DO NOTHING
+                """)
+                .param("email", EMAIL)
+                .param("hash", passwordEncoder.encode(SENHA))
+                .update();
     }
 
     @Test

@@ -1,4 +1,4 @@
-package com.lineup.usuario;
+package com.lineup.autenticacao;
 
 import com.lineup.config.ApiPaths;
 import com.lineup.config.SecurityConfig;
